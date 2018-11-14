@@ -1,0 +1,44 @@
+第一个演示示例运行结果:
+
+线程：715834271
+线程：1468902358
+Exception in thread "Thread-0" java.util.ConcurrentModificationException
+at java.base/java.util.ArrayList$Itr.checkForComodification(ArrayList.java:1042)
+	at java.base/java.util.ArrayList$Itr.next(ArrayList.java:996)
+	at com.captain.demo.threadNoSafe.ThreadSafeDemo1.run(ThreadSafeDemo1.java:28)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+移除元素的数量：999
+
+可见两个线程在同时运行导致抛出 ConcurrentModificationException 异常，原因是两个线程同时在调用iterator.remove()，导致modCount不等于expectedModCount
+
+错误出在synchronized(this)，括号内的为this的结果是对本对象加锁，而演示一中的两个线程创建时用了两个不同的对象，故实际仍在同一时间对同一个list调用了iterator.remove()，导致异常。
+
+本人认为的两种可行解决方法：
+1.将ThreadSafeDemo1中synchronized(this)改为synchronized(ThreadSafeDemo1.class),这样能锁住该类的所有对象的相应加锁部分即使创建了同一个类的多个对象也只能在同一时间段内调用一个对象的对应加锁部分代码
+
+
+修改后运行结果：
+线程：904476589
+线程：-1239616405
+移除元素的数量：1000
+移除元素的数量：0
+
+2.不改ThreadSafeDemo1，将ThreadMain中的
+ThreadSafeDemo1 demo1 = new ThreadSafeDemo1(list);
+ThreadSafeDemo1 demo2 = new ThreadSafeDemo1(list);
+Thread thread1 = new Thread(demo1);
+Thread thread2 = new Thread(demo2);
+改为
+ThreadSafeDemo1 demo1 = new ThreadSafeDemo1(list);
+Thread thread1 = new Thread(demo1);
+Thread thread2 = new Thread(demo1);
+
+这样就是在对同一个对象demo1在操作。
+
+修改后运行结果：
+线程：-1173773892
+线程：-496708318
+移除元素的数量：1000
+移除元素的数量：0
+
+第二个演示示例运行未出现异常
